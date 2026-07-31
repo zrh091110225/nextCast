@@ -196,12 +196,12 @@ class SessionMenuView extends WatchUi.View {
         drawWaterBackground(dc);
         var h = dc.getHeight();
         drawBrand(dc, "SESSION CONTROL");
-        drawCjkCenteredColor(dc, "本次垂钓", h * 0.17, MIST);
-        drawCjkCenteredColor(dc, "已抛竿 " + mController.castCount() + " 次 · " + formatDuration(mController.sessionElapsedSec()), h * 0.24, FOAM);
-        drawMenuRow(dc, h * 0.37, "选择", mController.isPaused() ? "继续计时" : "暂停计时", BOBBER);
-        drawMenuRow(dc, h * 0.53, "下页", "重新计时", FOAM);
-        drawMenuRow(dc, h * 0.69, "菜单", "结束并生成总结", ALERT);
-        drawCjkCenteredColor(dc, "返回：继续垂钓", h * 0.78, MUTED);
+        drawCjkCenteredColor(dc, "本次垂钓", h * 0.14, MIST);
+        drawCjkCenteredColor(dc, "已抛竿 " + mController.castCount() + " 次 · " + formatDuration(mController.sessionElapsedSec()), h * 0.21, FOAM);
+        drawMenuRow(dc, h * 0.34, "选择", mController.isPaused() ? "继续计时" : "暂停计时", BOBBER);
+        drawMenuRow(dc, h * 0.48, "下页", "调整下次间隔", FOAM);
+        drawMenuRow(dc, h * 0.62, "上页", "重新计时", FOAM);
+        drawMenuRow(dc, h * 0.76, "菜单", "结束本次垂钓", ALERT);
     }
 }
 
@@ -220,6 +220,12 @@ class SessionMenuDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function onNextPage() {
+        var adjustView = new IntervalAdjustView(mController);
+        WatchUi.pushView(adjustView, new IntervalAdjustDelegate(mController, adjustView), WatchUi.SLIDE_UP);
+        return true;
+    }
+
+    function onPreviousPage() {
         mController.waitForNextCast();
         WatchUi.popView(WatchUi.SLIDE_DOWN);
         return true;
@@ -231,6 +237,78 @@ class SessionMenuDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function onBack() {
+        WatchUi.popView(WatchUi.SLIDE_DOWN);
+        return true;
+    }
+}
+
+class IntervalAdjustView extends WatchUi.View {
+    private var mIntervalSec;
+
+    function initialize(controller) {
+        View.initialize();
+        mIntervalSec = controller.intervalSec();
+    }
+
+    function intervalSec() { return mIntervalSec; }
+
+    function adjust(delta) {
+        mIntervalSec += delta;
+        if (mIntervalSec < 30) { mIntervalSec = 30; }
+        if (mIntervalSec > 600) { mIntervalSec = 600; }
+        WatchUi.requestUpdate();
+    }
+
+    function onUpdate(dc) {
+        drawWaterBackground(dc);
+        var h = dc.getHeight();
+        drawBrand(dc, "NEXT CAST");
+        drawCjkCenteredColor(dc, "下次抛竿间隔", h * 0.20, MIST);
+        drawBobber(dc, h * 0.40, BOBBER);
+        drawCenteredColor(dc, formatDuration(mIntervalSec), h * 0.57, Graphics.FONT_LARGE, MIST);
+        drawCjkCenteredColor(dc, "上/下调整 · 选择保存", h * 0.72, FOAM);
+        drawCjkCenteredColor(dc, "返回：取消", h * 0.80, MUTED);
+    }
+}
+
+class IntervalAdjustDelegate extends WatchUi.BehaviorDelegate {
+    private var mController;
+    private var mView;
+
+    function initialize(controller, view) {
+        BehaviorDelegate.initialize();
+        mController = controller;
+        mView = view;
+    }
+
+    function onSelect() {
+        mController.setIntervalSec(mView.intervalSec());
+        WatchUi.popView(WatchUi.SLIDE_DOWN);
+        return true;
+    }
+
+    function onKey(keyEvent) {
+        var key = keyEvent.getKey();
+        if (key == WatchUi.KEY_START || key == WatchUi.KEY_ENTER) {
+            return onSelect();
+        } else if (key == WatchUi.KEY_UP) {
+            mView.adjust(-30);
+            return true;
+        } else if (key == WatchUi.KEY_DOWN) {
+            mView.adjust(30);
+            return true;
+        } else if (key == WatchUi.KEY_ESC) {
+            return cancel();
+        }
+        return false;
+    }
+
+    function onNextPage() { mView.adjust(30); return true; }
+    function onPreviousPage() { mView.adjust(-30); return true; }
+    function onBack() { return cancel(); }
+    function onMenu() { return cancel(); }
+
+    private function cancel() {
         WatchUi.popView(WatchUi.SLIDE_DOWN);
         return true;
     }
