@@ -6,6 +6,7 @@ class ReminderManager {
         play([
             new Attention.VibeProfile(70, 120)
         ]);
+        playConfirmationTone();
     }
 
     function remindDue() {
@@ -44,6 +45,18 @@ class ReminderManager {
             Attention.vibrate(pattern);
         } catch (e) {
             System.println("Vibration failed: " + e.getErrorMessage());
+        }
+    }
+
+    private function playConfirmationTone() {
+        if (!(Attention has :playTone)) {
+            return;
+        }
+        try {
+            // Keep cast confirmation distinct from the stronger due alert.
+            Attention.playTone(Attention.TONE_KEY);
+        } catch (e) {
+            System.println("Confirmation tone failed: " + e.getErrorMessage());
         }
     }
 }

@@ -385,11 +385,12 @@ class SummaryView extends WatchUi.View {
         drawWaterBackground(dc);
         var h = dc.getHeight();
         var summary = mController.latestSummary();
-        drawCjkCenteredColor(dc, "收竿完成", h * 0.14, BOBBER);
-        drawCjkCenteredColor(dc, "今日作钓已圆满结束", h * 0.22, MIST);
-        drawAchievementMedal(dc, h * 0.36);
-        drawCjkCenteredColor(dc, "一竿一守，静候有获", h * 0.50, FOAM);
-        drawTripStats(dc, h * 0.64, summary);
+        drawCjkCenteredColor(dc, "收竿完成", h * 0.13, BOBBER);
+        drawCjkCenteredColor(dc, "今日作钓已圆满结束", h * 0.20, MIST);
+        drawAchievementMedal(dc, h * 0.34);
+        drawCjkCenteredColor(dc, "本次作钓时长", h * 0.48, MUTED);
+        drawCenteredColor(dc, formatDuration(summary["durationSec"]), h * 0.54, Graphics.FONT_LARGE, FOAM);
+        drawCjkCenteredColor(dc, "抛竿 " + summary["castCount"] + "  ·  换饵 " + summary["baitReminderCount"], h * 0.70, MIST);
         drawSummaryFooter(dc, h * 0.80);
     }
 }
@@ -476,25 +477,25 @@ function drawRipple(dc, y, colour) {
 function drawAchievementMedal(dc, y) {
     var x = dc.getWidth() / 2;
     dc.setColor(WATER_LINE, WATER_LINE);
-    dc.fillCircle(x, y, 25);
+    dc.fillCircle(x, y, 18);
     dc.setColor(BOBBER, Graphics.COLOR_TRANSPARENT);
-    dc.drawCircle(x, y, 25);
-    dc.drawCircle(x, y, 20);
+    dc.drawCircle(x, y, 18);
+    dc.drawCircle(x, y, 14);
     dc.setColor(FOAM, Graphics.COLOR_TRANSPARENT);
-    dc.drawCircle(x - 4, y, 7);
-    dc.drawLine(x + 3, y, x + 12, y - 7);
-    dc.drawLine(x + 12, y - 7, x + 12, y + 7);
-    dc.drawLine(x + 12, y + 7, x + 3, y);
+    dc.drawCircle(x - 3, y, 5);
+    dc.drawLine(x + 2, y, x + 8, y - 5);
+    dc.drawLine(x + 8, y - 5, x + 8, y + 5);
+    dc.drawLine(x + 8, y + 5, x + 2, y);
     dc.setColor(BOBBER, Graphics.COLOR_TRANSPARENT);
-    dc.fillCircle(x - 6, y - 2, 1);
+    dc.fillCircle(x - 5, y - 1, 1);
     dc.setColor(FOAM, Graphics.COLOR_TRANSPARENT);
-    dc.drawLine(x - 13, y + 12, x + 8, y + 12);
+    dc.drawLine(x - 10, y + 9, x + 7, y + 9);
     dc.setColor(WATER, WATER);
-    dc.fillCircle(x + 20, y + 17, 10);
+    dc.fillCircle(x + 14, y + 12, 7);
     dc.setColor(BOBBER, Graphics.COLOR_TRANSPARENT);
-    dc.drawCircle(x + 20, y + 17, 10);
-    dc.drawLine(x + 15, y + 17, x + 19, y + 21);
-    dc.drawLine(x + 19, y + 21, x + 26, y + 12);
+    dc.drawCircle(x + 14, y + 12, 7);
+    dc.drawLine(x + 10, y + 12, x + 13, y + 15);
+    dc.drawLine(x + 13, y + 15, x + 18, y + 9);
 }
 
 function drawTripStats(dc, y, summary) {
@@ -517,8 +518,9 @@ function drawSummaryFooter(dc, y) {
     var w = dc.getWidth();
     dc.setColor(WATER_LINE, Graphics.COLOR_TRANSPARENT);
     dc.drawLine(w * 0.20, y - 9, w * 0.80, y - 9);
-    drawCjkCenteredAt(dc, "记录已保存", w * 0.37, y, FOAM);
-    drawCjkCenteredAt(dc, "选择退出", w * 0.66, y, BOBBER);
+    dc.drawLine(w * 0.50, y - 3, w * 0.50, y + 15);
+    drawCjkCenteredAt(dc, "记录已保存", w * 0.30, y, FOAM);
+    drawCjkCenteredAt(dc, "选择退出", w * 0.70, y, BOBBER);
 }
 
 function drawHook(dc, y, colour) {

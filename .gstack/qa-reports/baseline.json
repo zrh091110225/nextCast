@@ -1,0 +1,22 @@
+{
+  "date": "2026-07-31",
+  "target": "CastTimer Garmin Connect IQ watch app",
+  "healthScore": 78,
+  "issues": [
+    {
+      "id": "ISSUE-001",
+      "title": "Venu 3 启动图标会被放大",
+      "severity": "low",
+      "category": "visual"
+    }
+  ],
+  "categoryScores": {
+    "build": 100,
+    "manualSessionFlow": 100,
+    "visual": 97,
+    "automaticDetection": null,
+    "reminders": null,
+    "recovery": null
+  },
+  "coverageNote": "健康分数仅覆盖已执行的编译与 fēnix 7 手动会话流程；自动识别、提醒、恢复和其他设备交互尚未运行。"
+}
