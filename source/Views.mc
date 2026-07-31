@@ -103,8 +103,8 @@ class ActiveSessionView extends WatchUi.View {
         drawTimerFace(dc, h * 0.32, ALERT, 0, true);
         drawCjkCenteredColor(dc, "时间到，请换饵", h * 0.54, MIST);
         drawCjkCenteredColor(dc, "已超时 " + formatDuration(mController.overdueSec()), h * 0.62, ALERT);
-        drawCjkCenteredColor(dc, "重新抛竿后开始下一轮", h * 0.69, FOAM);
-        drawActionBar(dc, "选择：记录抛竿", BOBBER);
+        drawCjkCenteredColor(dc, "正在识别新的抛竿动作", h * 0.69, FOAM);
+        drawActionBar(dc, "抛竿后自动开始下一轮", BOBBER);
     }
 
     private function drawPausedState(dc, h) {
@@ -124,9 +124,9 @@ class ActiveSessionView extends WatchUi.View {
     private function drawCountingState(dc, h) {
         drawTimerFace(dc, h * 0.34, BOBBER, mController.remainingSec(), false);
         drawCjkCenteredColor(dc, "第 " + mController.castCount() + " 轮 · " + (mController.manualOnly() ? "手动计时" : "自动识别中"), h * 0.50, MIST);
-        drawStatSplit(dc, h * 0.63, "本次抛竿", mController.castCount().toString(), "作钓时长", formatDuration(mController.sessionElapsedSec()));
+        drawStatSplit(dc, h * 0.63, "累计抛竿", mController.castCount().toString(), "作钓时长", formatDuration(mController.sessionElapsedSec()));
         var undoSec = mController.undoRemainingSec();
-        drawActionBar(dc, undoSec > 0 ? "返回撤销  选择补记" : "选择补记  菜单", BOBBER);
+        drawActionBar(dc, undoSec > 0 ? "返回撤销  菜单" : "菜单：暂停/结束", BOBBER);
     }
 }
 
@@ -153,6 +153,12 @@ class ActiveSessionDelegate extends WatchUi.BehaviorDelegate {
     }
 
     private function recordOrResume() {
+        // While a countdown is running or has elapsed, a Select/touch must
+        // never create a new cast or reset the deadline. A new round is
+        // initiated only after the sensor recognizes a fresh casting motion.
+        if (mController.isDue() || (!mController.isPaused() && !mController.isArmed())) {
+            return true;
+        }
         if (mController.isPaused()) {
             mController.resumeFrozen();
         } else {

@@ -100,7 +100,9 @@ class SessionController {
         } catch (e) {
             System.println("Interval persistence failed: " + e.getErrorMessage());
         }
-        if (mState.equals("COUNTING") || mState.equals("DUE")) {
+        // An overdue cycle is deliberately not restarted by configuration.
+        // It remains in DUE until a fresh cast is recognized.
+        if (mState.equals("COUNTING")) {
             mDeadlineEpoch = nowEpoch() + mIntervalSec;
             mState = "COUNTING";
             mDueReminderCount = 0;
@@ -143,7 +145,10 @@ class SessionController {
     }
 
     function recordManualCast() {
-        if (!mState.equals("ARMED") && !mState.equals("COUNTING") && !mState.equals("DUE")) {
+        // Once bait-change time has elapsed, only the motion detector may
+        // start the next cycle. This prevents an incidental button press from
+        // being interpreted as a fresh cast.
+        if (!mState.equals("ARMED") && !mState.equals("COUNTING")) {
             return;
         }
         recordCast("manual", 1.0);
