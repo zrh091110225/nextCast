@@ -1,0 +1,6 @@
+# Connect IQ command-line build configuration.
+project.manifest = manifest.xml
+base.sourcePath = source
+base.resourcePath = resources
+project.typecheck = 0
+project.optimization = 1

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<iq:manifest version="3" xmlns:iq="http://www.garmin.com/xml/connectiq">
+    <iq:application id="3c7f7d4c-4b7f-4bb1-8d4d-86ec32e5c001"
+                    type="watch-app"
+                    name="@Strings.AppName"
+                    entry="CastTimerApp"
+                    launcherIcon="@Drawables.LauncherIcon"
+                    minSdkVersion="4.2.0">
+        <iq:products>
+            <iq:product id="fenix7"/>
+            <iq:product id="fr255"/>
+            <iq:product id="venu3"/>
+        </iq:products>
+        <iq:permissions>
+            <iq:uses-permission id="Fit"/>
+            <iq:uses-permission id="Sensor"/>
+        </iq:permissions>
+        <iq:languages>
+            <iq:language>eng</iq:language>
+            <iq:language>zhs</iq:language>
+        </iq:languages>
+    </iq:application>
+</iq:manifest>

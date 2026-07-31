@@ -1,0 +1,7 @@
+# Garmin developer signing keys must never be committed.
+.keys/
+
+# Connect IQ compiler outputs.
+bin/
+*.prg
+*.iq
