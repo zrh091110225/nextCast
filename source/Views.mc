@@ -25,14 +25,11 @@ class SetupView extends WatchUi.View {
         drawWaterBackground(dc);
         var h = dc.getHeight();
         drawBrand(dc, "SMART FISHING");
-        drawCjkCenteredColor(dc, "智能守钓", h * 0.14, MIST);
-        drawCjkCenteredColor(dc, "识别抛竿 · 自动计时 · 到点提醒", h * 0.21, MUTED);
-        drawBobber(dc, h * 0.34, BOBBER);
-        drawCjkCenteredColor(dc, "换饵间隔", h * 0.48, FOAM);
-        drawCenteredColor(dc, formatDuration(mController.intervalSec()), h * 0.54, Graphics.FONT_LARGE, MIST);
-        drawCjkCenteredColor(dc, "每次抛竿后自动重置", h * 0.66, MUTED);
-        drawCjkCenteredColor(dc, "上下调整 30 秒", h * 0.72, FOAM);
-        drawActionBar(dc, "选择：开始识别", BOBBER);
+        drawCjkCenteredColor(dc, "智能守钓", h * 0.17, MIST);
+        drawBobber(dc, h * 0.36, BOBBER);
+        drawCjkCenteredColor(dc, "换饵间隔", h * 0.54, FOAM);
+        drawCenteredColor(dc, formatDuration(mController.intervalSec()), h * 0.60, Graphics.FONT_LARGE, MIST);
+        drawActionBar(dc, "选择：开始垂钓", BOBBER);
     }
 }
 
@@ -103,38 +100,33 @@ class ActiveSessionView extends WatchUi.View {
     }
 
     private function drawDueState(dc, h) {
-        drawTimerFace(dc, h * 0.39, ALERT, 0, true);
+        drawTimerFace(dc, h * 0.32, ALERT, 0, true);
         drawCjkCenteredColor(dc, "时间到，请换饵", h * 0.54, MIST);
         drawCjkCenteredColor(dc, "已超时 " + formatDuration(mController.overdueSec()), h * 0.62, ALERT);
-        drawCjkCenteredColor(dc, "重新抛竿后将自动进入下一轮", h * 0.69, FOAM);
-        drawActionBar(dc, "选择：手动记录抛竿", BOBBER);
+        drawCjkCenteredColor(dc, "重新抛竿后开始下一轮", h * 0.69, FOAM);
+        drawActionBar(dc, "选择：记录抛竿", BOBBER);
     }
 
     private function drawPausedState(dc, h) {
-        drawTimerFace(dc, h * 0.39, MUTED, mController.remainingSec(), false);
+        drawTimerFace(dc, h * 0.35, MUTED, mController.remainingSec(), false);
         drawCjkCenteredColor(dc, "已暂停", h * 0.56, MIST);
         drawCjkCenteredColor(dc, "计时冻结，识别已停止", h * 0.64, FOAM);
         drawActionBar(dc, "选择：继续计时", BOBBER);
     }
 
     private function drawArmedState(dc, h) {
-        drawCastLine(dc, h * 0.35);
-        drawCjkCenteredColor(dc, "等待第一次抛竿", h * 0.54, MIST);
-        drawCjkCenteredColor(dc, mController.manualOnly() ? "手动模式：按选择补记" : "自动识别已就绪", h * 0.62, FOAM);
-        drawCjkCenteredColor(dc, "抛竿后立即开始倒计时", h * 0.69, MUTED);
-        drawActionBar(dc, "选择：手动记录抛竿", BOBBER);
+        drawCastLine(dc, h * 0.36);
+        drawCjkCenteredColor(dc, "准备抛竿", h * 0.55, MIST);
+        drawCjkCenteredColor(dc, mController.manualOnly() ? "手动模式：按选择补记" : "自动识别已就绪", h * 0.64, FOAM);
+        drawActionBar(dc, "选择：记录抛竿", BOBBER);
     }
 
     private function drawCountingState(dc, h) {
-        drawCjkCenteredColor(dc, "本轮距换饵", h * 0.17, FOAM);
-        drawTimerFace(dc, h * 0.39, BOBBER, mController.remainingSec(), false);
-        drawCjkCenteredColor(dc, "第 " + mController.castCount() + " 轮 · " + (mController.manualOnly() ? "手动计时" : "自动识别中"), h * 0.59, MIST);
-        drawStatSplit(dc, h * 0.68, "本次抛竿", mController.castCount().toString(), "作钓时长", formatDuration(mController.sessionElapsedSec()));
+        drawTimerFace(dc, h * 0.34, BOBBER, mController.remainingSec(), false);
+        drawCjkCenteredColor(dc, "第 " + mController.castCount() + " 轮 · " + (mController.manualOnly() ? "手动计时" : "自动识别中"), h * 0.50, MIST);
+        drawStatSplit(dc, h * 0.63, "本次抛竿", mController.castCount().toString(), "作钓时长", formatDuration(mController.sessionElapsedSec()));
         var undoSec = mController.undoRemainingSec();
-        if (undoSec > 0) {
-            drawCjkCenteredColor(dc, "返回可撤销（" + undoSec + " 秒）", h * 0.75, BOBBER);
-        }
-        drawActionBar(dc, "选择：补记抛竿  菜单：暂停/结束", BOBBER);
+        drawActionBar(dc, undoSec > 0 ? "返回撤销  选择补记" : "选择补记  菜单", BOBBER);
     }
 }
 
@@ -201,7 +193,7 @@ class SessionMenuView extends WatchUi.View {
         drawCjkCenteredColor(dc, "本次垂钓", h * 0.17, MIST);
         drawCjkCenteredColor(dc, "已抛竿 " + mController.castCount() + " 次 · " + formatDuration(mController.sessionElapsedSec()), h * 0.24, FOAM);
         drawMenuRow(dc, h * 0.37, "选择", mController.isPaused() ? "继续计时" : "暂停计时", BOBBER);
-        drawMenuRow(dc, h * 0.53, "下页", "等待下一次抛竿", FOAM);
+        drawMenuRow(dc, h * 0.53, "下页", "重新计时", FOAM);
         drawMenuRow(dc, h * 0.69, "菜单", "结束并生成总结", ALERT);
         drawCjkCenteredColor(dc, "返回：继续垂钓", h * 0.78, MUTED);
     }
@@ -327,11 +319,6 @@ class SummaryDelegate extends WatchUi.BehaviorDelegate {
 function drawWaterBackground(dc) {
     dc.setColor(WATER, WATER);
     dc.clear();
-    var w = dc.getWidth();
-    var h = dc.getHeight();
-    dc.setColor(WATER_LINE, Graphics.COLOR_TRANSPARENT);
-    dc.drawLine(w * 0.22, h * 0.14, w * 0.78, h * 0.14);
-    dc.drawLine(w * 0.22, h * 0.76, w * 0.78, h * 0.76);
 }
 
 function drawBrand(dc, text) {
@@ -340,12 +327,10 @@ function drawBrand(dc, text) {
 }
 
 function drawSessionHeader(dc, controller, h) {
-    var w = dc.getWidth();
     var activeColour = controller.manualOnly() ? BOBBER : FOAM;
     dc.setColor(activeColour, Graphics.COLOR_TRANSPARENT);
-    dc.fillCircle(w * 0.23, h * 0.055, 3);
+    dc.fillCircle(dc.getWidth() * 0.28, h * 0.055, 3);
     drawCenteredColor(dc, controller.manualOnly() ? "MANUAL" : "AUTO READY", h * 0.035, Graphics.FONT_TINY, MUTED);
-    drawCjkRightColor(dc, formatDuration(controller.sessionElapsedSec()), w * 0.82, h * 0.035, MUTED);
 }
 
 // A consistent centrepiece makes the timer readable at a glance without
@@ -353,7 +338,8 @@ function drawSessionHeader(dc, controller, h) {
 // Connect IQ target in this app's device range.
 function drawTimerFace(dc, y, colour, remainingSec, isDue) {
     var x = dc.getWidth() / 2;
-    var radius = dc.getWidth() * 0.27;
+    var radius = dc.getWidth() * 0.18;
+    var timerText = isDue ? "00:00" : formatDuration(remainingSec);
     dc.setColor(WATER_LINE, Graphics.COLOR_TRANSPARENT);
     dc.drawCircle(x, y, radius);
     dc.drawCircle(x, y, radius - 5);
@@ -364,10 +350,11 @@ function drawTimerFace(dc, y, colour, remainingSec, isDue) {
     dc.drawLine(x - radius, y, x - radius + 7, y);
     if (isDue) {
         drawRipple(dc, y, colour);
-        drawCenteredColor(dc, "00:00", y - 12, Graphics.FONT_LARGE, colour);
-    } else {
-        drawCenteredColor(dc, formatDuration(remainingSec), y - 12, Graphics.FONT_LARGE, MIST);
     }
+    // Place the text by its actual system-font height, not by a fixed guess.
+    // This keeps the countdown centred inside the ring on every device.
+    var dimensions = dc.getTextDimensions(timerText, Graphics.FONT_LARGE);
+    drawCenteredColor(dc, timerText, y - (dimensions[1] / 2), Graphics.FONT_LARGE, isDue ? colour : MIST);
 }
 
 function drawStatSplit(dc, y, leftLabel, leftValue, rightLabel, rightValue) {
@@ -451,21 +438,33 @@ function drawSummaryFooter(dc, y) {
 }
 
 function drawHook(dc, y, colour) {
-    var x = dc.getWidth() / 2;
-    dc.setColor(colour, Graphics.COLOR_TRANSPARENT);
-    dc.drawLine(x, y - 28, x, y + 8);
-    dc.drawCircle(x + 6, y + 9, 10);
-    dc.drawLine(x + 10, y + 1, x + 19, y - 9);
+    drawFishingLogoMark(dc, y);
 }
 
 function drawCastLine(dc, y) {
+    drawFishingLogoMark(dc, y);
+}
+
+function drawFishingLogoMark(dc, y) {
     var x = dc.getWidth() / 2;
-    dc.setColor(FOAM, Graphics.COLOR_TRANSPARENT);
-    dc.drawLine(x - 34, y + 14, x + 16, y - 16);
-    dc.setColor(BOBBER, Graphics.COLOR_TRANSPARENT);
-    dc.fillCircle(x + 22, y - 20, 5);
+    // Reuse the launcher mark's vocabulary: bobber, line, hook and ripples.
+    // Keeping this compact mark identical in spirit makes the confirmation
+    // and message pages feel like part of the same product.
     dc.setColor(WATER_LINE, Graphics.COLOR_TRANSPARENT);
-    dc.drawLine(x - 42, y + 20, x + 38, y + 20);
+    dc.drawCircle(x, y, 25);
+    dc.setColor(FOAM, Graphics.COLOR_TRANSPARENT);
+    dc.drawLine(x - 5, y - 18, x - 5, y - 7);
+    dc.setColor(BOBBER, Graphics.COLOR_TRANSPARENT);
+    dc.fillCircle(x - 5, y - 1, 7);
+    dc.setColor(WATER, WATER);
+    dc.drawLine(x - 12, y - 1, x + 2, y - 1);
+    dc.setColor(FOAM, Graphics.COLOR_TRANSPARENT);
+    dc.drawLine(x + 12, y - 15, x + 12, y + 5);
+    dc.drawCircle(x + 6, y + 6, 10);
+    dc.drawLine(x + 10, y - 2, x + 18, y - 10);
+    dc.setColor(WATER_LINE, Graphics.COLOR_TRANSPARENT);
+    dc.drawLine(x - 16, y + 19, x + 16, y + 19);
+    dc.drawLine(x - 10, y + 24, x + 10, y + 24);
 }
 
 function drawMenuRow(dc, y, key, label, colour) {
