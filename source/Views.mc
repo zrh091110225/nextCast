@@ -491,11 +491,18 @@ function drawMenuRow(dc, y, key, label, colour) {
 function drawActionBar(dc, text, colour) {
     var w = dc.getWidth();
     var h = dc.getHeight();
+    var barY = h * 0.775;
+    var barHeight = h * 0.070;
+    if (gCjkUiFont == null) { gCjkUiFont = Application.loadResource(Rez.Fonts.CjkUi); }
+    var dimensions = dc.getTextDimensions(text, gCjkUiFont);
     dc.setColor(WATER_LINE, WATER_LINE);
     // Round displays lose usable width quickly near the lower edge.  Keep the
     // control inside the inscribed safe circle instead of the raw framebuffer.
-    dc.fillRectangle(w * 0.15, h * 0.80, w * 0.70, h * 0.050);
-    drawCjkCenteredColor(dc, text, h * 0.805, colour);
+    // The CJK bitmap font is taller than the old bar on several devices, so
+    // centre it from its measured height rather than a fixed top offset.
+    dc.fillRectangle(w * 0.15, barY, w * 0.70, barHeight);
+    dc.setColor(colour, Graphics.COLOR_TRANSPARENT);
+    dc.drawText(w / 2, barY + ((barHeight - dimensions[1]) / 2), gCjkUiFont, text, Graphics.TEXT_JUSTIFY_CENTER);
 }
 
 function drawCentered(dc, text, y, font) {

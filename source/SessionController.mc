@@ -63,6 +63,12 @@ class SessionController {
     function manualOnly() { return mManualOnly; }
     function detectorSampleRate() { return mDetector.sampleRate(); }
     function latestSummary() { return mLatestSummary; }
+    function canDetectCastMotion() {
+        if (mManualOnly || (!mState.equals("ARMED") && !mState.equals("COUNTING") && !mState.equals("DUE"))) {
+            return false;
+        }
+        return !isPostDueCastGuardActive(mState, mDeadlineEpoch, nowEpoch());
+    }
     function sessionElapsedSec() {
         if (mSessionStartedEpoch == 0) { return 0; }
         var elapsed = nowEpoch() - mSessionStartedEpoch;
@@ -109,7 +115,7 @@ class SessionController {
     }
 
     function onAutoCast(confidence, sampleRate) {
-        if (mManualOnly || (!mState.equals("ARMED") && !mState.equals("COUNTING") && !mState.equals("DUE"))) {
+        if (!canDetectCastMotion()) {
             return;
         }
         recordCast("auto", confidence);

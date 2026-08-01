@@ -133,6 +133,7 @@ class CastDetector {
         }
 
         var nowMs = System.getTimer();
+        var canDetectCast = mController.canDetectCastMotion();
         for (var i = 0; i < xs.size(); i += 1) {
             if (!mGravityReady) {
                 mGravityX = xs[i].toFloat();
@@ -161,6 +162,13 @@ class CastDetector {
 
             if (mWarmupRemaining > 0) {
                 mWarmupRemaining -= 1;
+                continue;
+            }
+
+            // Keep the gravity estimate current while the user reels in, but
+            // never carry a partial retrieval sequence beyond the guard.
+            if (!canDetectCast) {
+                resetCastSequence();
                 continue;
             }
 
