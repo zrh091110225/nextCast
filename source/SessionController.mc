@@ -9,54 +9,41 @@ class SessionController {
     const ARMED = "ARMED";
     const COUNTING = "COUNTING";
     const DUE = "DUE";
-    const PAUSED = "PAUSED";
 
     private var mState = "SETUP";
-    private var mPreviousState = "SETUP";
     private var mIntervalSec = 180;
     private var mDeadlineEpoch = 0;
-    private var mPausedRemainingSec = 0;
     private var mCastCount = 0;
     private var mAutoCastCount = 0;
     private var mManualCastCount = 0;
-    private var mUndoneCastCount = 0;
     private var mDueReminderCount = 0;
     private var mBaitReminderCount = 0;
     private var mLastCastEpoch = 0;
     private var mLastCastSource = "";
     private var mSessionStartedEpoch = 0;
-    private var mPausedAtEpoch = 0;
-    private var mAccumulatedPausedSec = 0;
     private var mManualOnly = false;
     private var mDetector;
     private var mReminder;
     private var mRecorder;
     private var mCapabilities;
     private var mTimer;
-    private var mUndo = null;
     private var mLatestSummary = null;
 
     function initialize() {
         // Initialize state explicitly. Class constants are not reliable in member
         // initializers on every Connect IQ runtime.
         mState = "SETUP";
-        mPreviousState = "SETUP";
         mIntervalSec = 180;
         mDeadlineEpoch = 0;
-        mPausedRemainingSec = 0;
         mCastCount = 0;
         mAutoCastCount = 0;
         mManualCastCount = 0;
-        mUndoneCastCount = 0;
         mDueReminderCount = 0;
         mBaitReminderCount = 0;
         mLastCastEpoch = 0;
         mLastCastSource = "";
         mSessionStartedEpoch = 0;
-        mPausedAtEpoch = 0;
-        mAccumulatedPausedSec = 0;
         mManualOnly = false;
-        mUndo = null;
         mLatestSummary = null;
         mDetector = new CastDetector(self);
         mReminder = new ReminderManager();
@@ -68,7 +55,6 @@ class SessionController {
     function state() { return mState; }
     function hasRecoverableSession() { return !mState.equals("SETUP"); }
     function isDue() { return mState.equals("DUE"); }
-    function isPaused() { return mState.equals("PAUSED"); }
     function isArmed() { return mState.equals("ARMED"); }
     function intervalSec() { return mIntervalSec; }
     function castCount() { return mCastCount; }
@@ -77,17 +63,9 @@ class SessionController {
     function manualOnly() { return mManualOnly; }
     function detectorSampleRate() { return mDetector.sampleRate(); }
     function latestSummary() { return mLatestSummary; }
-    function undoRemainingSec() {
-        if (mUndo == null) { return 0; }
-        var remaining = 10 - (nowEpoch() - mUndo[:recordedAt]);
-        return remaining > 0 ? remaining : 0;
-    }
     function sessionElapsedSec() {
         if (mSessionStartedEpoch == 0) { return 0; }
-        var elapsed = nowEpoch() - mSessionStartedEpoch - mAccumulatedPausedSec;
-        if (mState.equals("PAUSED") && mPausedAtEpoch > 0) {
-            elapsed -= nowEpoch() - mPausedAtEpoch;
-        }
+        var elapsed = nowEpoch() - mSessionStartedEpoch;
         return elapsed > 0 ? elapsed : 0;
     }
 
@@ -100,14 +78,9 @@ class SessionController {
         } catch (e) {
             System.println("Interval persistence failed: " + e.getErrorMessage());
         }
-        // An overdue cycle is deliberately not restarted by configuration.
-        // It remains in DUE until a fresh cast is recognized.
-        if (mState.equals("COUNTING")) {
-            mDeadlineEpoch = nowEpoch() + mIntervalSec;
-            mState = "COUNTING";
-            mDueReminderCount = 0;
-            persist();
-        }
+        // An interval change applies to the next cast only. It never changes
+        // the timing of bait already in the water.
+        persist();
         WatchUi.requestUpdate();
     }
 
@@ -128,8 +101,6 @@ class SessionController {
 
         mState = "ARMED";
         mSessionStartedEpoch = nowEpoch();
-        mPausedAtEpoch = 0;
-        mAccumulatedPausedSec = 0;
         mManualOnly = !mDetector.start();
         startTicking();
         persist();
@@ -154,82 +125,6 @@ class SessionController {
         recordCast("manual", 1.0);
     }
 
-    function pause() {
-        if (!mState.equals("ARMED") && !mState.equals("COUNTING") && !mState.equals("DUE")) {
-            return;
-        }
-        mPreviousState = mState;
-        mPausedRemainingSec = remainingSec();
-        mPausedAtEpoch = nowEpoch();
-        mState = "PAUSED";
-        mDetector.stop();
-        stopTicking();
-        persist();
-        WatchUi.requestUpdate();
-    }
-
-    function resumeFrozen() {
-        if (!mState.equals("PAUSED")) {
-            return;
-        }
-        mState = mPreviousState;
-        if (mPausedAtEpoch > 0) {
-            mAccumulatedPausedSec += nowEpoch() - mPausedAtEpoch;
-            mPausedAtEpoch = 0;
-        }
-        if (mState.equals("COUNTING")) {
-            mDeadlineEpoch = nowEpoch() + mPausedRemainingSec;
-        }
-        if (!mManualOnly) {
-            mManualOnly = !mDetector.start();
-        }
-        startTicking();
-        persist();
-        WatchUi.requestUpdate();
-    }
-
-    function waitForNextCast() {
-        var wasPaused = mState.equals("PAUSED");
-        if (wasPaused && mPausedAtEpoch > 0) {
-            mAccumulatedPausedSec += nowEpoch() - mPausedAtEpoch;
-            mPausedAtEpoch = 0;
-        }
-        mDeadlineEpoch = 0;
-        mPausedRemainingSec = 0;
-        mDueReminderCount = 0;
-        mState = "ARMED";
-        mPreviousState = "ARMED";
-        // Leaving a paused timer for a fresh cast is a complete resume path:
-        // recognition and ticking must return, otherwise the UI would claim
-        // that it is armed while no sensor stream is running.
-        if (wasPaused) {
-            if (!mManualOnly) {
-                mManualOnly = !mDetector.start();
-            }
-            startTicking();
-        }
-        persist();
-        WatchUi.requestUpdate();
-    }
-
-    function undoLastCast() {
-        if (mUndo == null || (nowEpoch() - mUndo[:recordedAt]) > 10) {
-            return false;
-        }
-        mState = mUndo[:state];
-        mDeadlineEpoch = mUndo[:deadline];
-        mCastCount = mUndo[:castCount];
-        mAutoCastCount = mUndo[:autoCount];
-        mManualCastCount = mUndo[:manualCount];
-        mDueReminderCount = mUndo[:dueCount];
-        mBaitReminderCount = mUndo[:baitReminderCount];
-        mUndoneCastCount += 1;
-        mUndo = null;
-        persist();
-        WatchUi.requestUpdate();
-        return true;
-    }
-
     function endSession() {
         mDetector.stop();
         stopTicking();
@@ -242,20 +137,13 @@ class SessionController {
         mCastCount = 0;
         mAutoCastCount = 0;
         mManualCastCount = 0;
-        mUndoneCastCount = 0;
         mDueReminderCount = 0;
         mBaitReminderCount = 0;
-        mUndo = null;
         mSessionStartedEpoch = 0;
-        mPausedAtEpoch = 0;
-        mAccumulatedPausedSec = 0;
         WatchUi.switchToView(new SummaryView(self), new SummaryDelegate(), WatchUi.SLIDE_IMMEDIATE);
     }
 
     function remainingSec() {
-        if (mState.equals("PAUSED")) {
-            return mPausedRemainingSec;
-        }
         if (mDeadlineEpoch == 0) {
             return 0;
         }
@@ -276,23 +164,18 @@ class SessionController {
             return;
         }
         var saved = {
-            "schemaVersion" => 3,
+            "schemaVersion" => 4,
             "state" => mState,
-            "previousState" => mPreviousState,
             "intervalSec" => mIntervalSec,
             "deadlineEpoch" => mDeadlineEpoch,
-            "pausedRemainingSec" => mPausedRemainingSec,
             "castCount" => mCastCount,
             "autoCastCount" => mAutoCastCount,
             "manualCastCount" => mManualCastCount,
-            "undoneCastCount" => mUndoneCastCount,
             "dueReminderCount" => mDueReminderCount,
             "baitReminderCount" => mBaitReminderCount,
             "lastCastEpoch" => mLastCastEpoch,
             "lastCastSource" => mLastCastSource,
             "sessionStartedEpoch" => mSessionStartedEpoch,
-            "pausedAtEpoch" => mPausedAtEpoch,
-            "accumulatedPausedSec" => mAccumulatedPausedSec,
             "manualOnly" => mManualOnly
         };
         try {
@@ -320,21 +203,18 @@ class SessionController {
             System.println("Session restore failed: " + e.getErrorMessage());
             return;
         }
-        if (saved == null || (saved["schemaVersion"] != 1 && saved["schemaVersion"] != 2 && saved["schemaVersion"] != 3) || saved["state"] == null || saved["intervalSec"] == null || saved["deadlineEpoch"] == null) {
+        if (saved == null || (saved["schemaVersion"] != 1 && saved["schemaVersion"] != 2 && saved["schemaVersion"] != 3 && saved["schemaVersion"] != 4) || saved["state"] == null || saved["intervalSec"] == null || saved["deadlineEpoch"] == null) {
             return;
         }
         // Builds published before the storage migration used Symbol values for
         // state. Normalize them so an old saved :SETUP does not become a false
         // active session after an update.
         mState = saved["state"].toString();
-        mPreviousState = saved["previousState"] == null ? "SETUP" : saved["previousState"].toString();
         mIntervalSec = saved["intervalSec"];
         mDeadlineEpoch = saved["deadlineEpoch"];
-        mPausedRemainingSec = saved["pausedRemainingSec"];
         mCastCount = saved["castCount"];
         mAutoCastCount = saved["autoCastCount"];
         mManualCastCount = saved["manualCastCount"];
-        mUndoneCastCount = saved["undoneCastCount"];
         mDueReminderCount = saved["dueReminderCount"];
         mBaitReminderCount = saved["baitReminderCount"] == null ? 0 : saved["baitReminderCount"];
         mLastCastEpoch = saved["lastCastEpoch"];
@@ -344,8 +224,21 @@ class SessionController {
         mSessionStartedEpoch = saved["sessionStartedEpoch"];
         if (mSessionStartedEpoch == null) { mSessionStartedEpoch = mLastCastEpoch; }
         if (mSessionStartedEpoch == null) { mSessionStartedEpoch = 0; }
-        mPausedAtEpoch = saved["pausedAtEpoch"] == null ? 0 : saved["pausedAtEpoch"];
-        mAccumulatedPausedSec = saved["accumulatedPausedSec"] == null ? 0 : saved["accumulatedPausedSec"];
+
+        // A session paused by an older app version is resumed safely during
+        // migration because pausing is no longer part of the product flow.
+        if (mState.equals("PAUSED")) {
+            var previous = saved["previousState"] == null ? "ARMED" : saved["previousState"].toString();
+            if (previous.equals("COUNTING")) {
+                mState = "COUNTING";
+                var pausedRemaining = saved["pausedRemainingSec"] == null ? 0 : saved["pausedRemainingSec"];
+                mDeadlineEpoch = nowEpoch() + pausedRemaining;
+            } else if (previous.equals("DUE")) {
+                mState = "DUE";
+            } else {
+                mState = "ARMED";
+            }
+        }
 
         // A countdown without a deadline can be left behind by an interrupted
         // transition. Recover it as an armed session rather than presenting a
@@ -370,16 +263,6 @@ class SessionController {
     }
 
     private function recordCast(source, confidence) {
-        mUndo = {
-            :recordedAt => nowEpoch(),
-            :state => mState,
-            :deadline => mDeadlineEpoch,
-            :castCount => mCastCount,
-            :autoCount => mAutoCastCount,
-            :manualCount => mManualCastCount,
-            :dueCount => mDueReminderCount,
-            :baitReminderCount => mBaitReminderCount
-        };
         mCastCount += 1;
         if (source == "auto") {
             mAutoCastCount += 1;
@@ -437,7 +320,6 @@ class SessionController {
             "castCount" => mCastCount,
             "autoCastCount" => mAutoCastCount,
             "manualCastCount" => mManualCastCount,
-            "undoneCastCount" => mUndoneCastCount,
             "intervalSec" => mIntervalSec,
             "durationSec" => sessionElapsedSec(),
             "baitReminderCount" => mBaitReminderCount

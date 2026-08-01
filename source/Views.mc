@@ -90,8 +90,6 @@ class ActiveSessionView extends WatchUi.View {
 
         if (mController.isDue()) {
             drawDueState(dc, h);
-        } else if (mController.isPaused()) {
-            drawPausedState(dc, h);
         } else if (mController.isArmed()) {
             drawArmedState(dc, h);
         } else {
@@ -104,14 +102,7 @@ class ActiveSessionView extends WatchUi.View {
         drawCjkCenteredColor(dc, "时间到，请换饵", h * 0.54, MIST);
         drawCjkCenteredColor(dc, "已超时 " + formatDuration(mController.overdueSec()), h * 0.62, ALERT);
         drawCjkCenteredColor(dc, "正在识别新的抛竿动作", h * 0.69, FOAM);
-        drawActionBar(dc, "抛竿后自动开始下一轮", BOBBER);
-    }
-
-    private function drawPausedState(dc, h) {
-        drawTimerFace(dc, h * 0.35, MUTED, mController.remainingSec(), false);
-        drawCjkCenteredColor(dc, "已暂停", h * 0.56, MIST);
-        drawCjkCenteredColor(dc, "计时冻结，识别已停止", h * 0.64, FOAM);
-        drawActionBar(dc, "选择：继续计时", BOBBER);
+        drawActionBar(dc, "菜单：调间隔", BOBBER);
     }
 
     private function drawArmedState(dc, h) {
@@ -125,8 +116,7 @@ class ActiveSessionView extends WatchUi.View {
         drawTimerFace(dc, h * 0.34, BOBBER, mController.remainingSec(), false);
         drawCjkCenteredColor(dc, "第 " + mController.castCount() + " 轮 · " + (mController.manualOnly() ? "手动计时" : "自动识别中"), h * 0.50, MIST);
         drawStatSplit(dc, h * 0.63, "累计抛竿", mController.castCount().toString(), "作钓时长", formatDuration(mController.sessionElapsedSec()));
-        var undoSec = mController.undoRemainingSec();
-        drawActionBar(dc, undoSec > 0 ? "返回撤销  菜单" : "菜单：暂停/结束", BOBBER);
+        drawActionBar(dc, "菜单：调间隔", BOBBER);
     }
 }
 
@@ -138,106 +128,43 @@ class ActiveSessionDelegate extends WatchUi.BehaviorDelegate {
         mController = controller;
     }
 
-    function onSelect() { return recordOrResume(); }
+    function onSelect() { return recordManualCast(); }
 
     function onKey(keyEvent) {
         var key = keyEvent.getKey();
         if (key == WatchUi.KEY_START || key == WatchUi.KEY_ENTER) {
-            return recordOrResume();
+            return recordManualCast();
         } else if (key == WatchUi.KEY_ESC) {
-            return undo();
+            return confirmEnd();
         } else if (key == WatchUi.KEY_MENU) {
-            return openMenu();
+            return openIntervalAdjust();
         }
         return false;
     }
 
-    private function recordOrResume() {
+    private function recordManualCast() {
         // While a countdown is running or has elapsed, a Select/touch must
         // never create a new cast or reset the deadline. A new round is
         // initiated only after the sensor recognizes a fresh casting motion.
-        if (mController.isDue() || (!mController.isPaused() && !mController.isArmed())) {
+        if (mController.isDue() || !mController.isArmed()) {
             return true;
         }
-        if (mController.isPaused()) {
-            mController.resumeFrozen();
-        } else {
-            mController.recordManualCast();
-        }
+        mController.recordManualCast();
         return true;
     }
 
-    function onBack() { return undo(); }
+    function onBack() { return confirmEnd(); }
 
-    private function undo() {
-        if (!mController.undoLastCast()) {
-            WatchUi.pushView(new MessageView("无可撤销事件", "抛竿后 10 秒内可撤销"), null, WatchUi.SLIDE_UP);
-        }
-        return true;
-    }
-
-    function onMenu() { return openMenu(); }
-
-    private function openMenu() {
-        WatchUi.pushView(new SessionMenuView(mController), new SessionMenuDelegate(mController), WatchUi.SLIDE_UP);
-        return true;
-    }
-}
-
-class SessionMenuView extends WatchUi.View {
-    private var mController;
-
-    function initialize(controller) {
-        View.initialize();
-        mController = controller;
-    }
-
-    function onUpdate(dc) {
-        drawWaterBackground(dc);
-        var h = dc.getHeight();
-        drawBrand(dc, "SESSION CONTROL");
-        drawCjkCenteredColor(dc, "本次垂钓", h * 0.14, MIST);
-        drawCjkCenteredColor(dc, "已抛竿 " + mController.castCount() + " 次 · " + formatDuration(mController.sessionElapsedSec()), h * 0.21, FOAM);
-        drawMenuRow(dc, h * 0.34, "选择", mController.isPaused() ? "继续计时" : "暂停计时", BOBBER);
-        drawMenuRow(dc, h * 0.48, "下页", "调整下次间隔", FOAM);
-        drawMenuRow(dc, h * 0.62, "上页", "重新计时", FOAM);
-        drawMenuRow(dc, h * 0.76, "菜单", "结束本次垂钓", ALERT);
-    }
-}
-
-class SessionMenuDelegate extends WatchUi.BehaviorDelegate {
-    private var mController;
-
-    function initialize(controller) {
-        BehaviorDelegate.initialize();
-        mController = controller;
-    }
-
-    function onSelect() {
-        if (mController.isPaused()) { mController.resumeFrozen(); } else { mController.pause(); }
-        WatchUi.popView(WatchUi.SLIDE_DOWN);
-        return true;
-    }
-
-    function onNextPage() {
-        var adjustView = new IntervalAdjustView(mController);
-        WatchUi.pushView(adjustView, new IntervalAdjustDelegate(mController, adjustView), WatchUi.SLIDE_UP);
-        return true;
-    }
-
-    function onPreviousPage() {
-        mController.waitForNextCast();
-        WatchUi.popView(WatchUi.SLIDE_DOWN);
-        return true;
-    }
-
-    function onMenu() {
+    private function confirmEnd() {
         WatchUi.pushView(new EndConfirmView(mController), new EndConfirmDelegate(mController), WatchUi.SLIDE_UP);
         return true;
     }
 
-    function onBack() {
-        WatchUi.popView(WatchUi.SLIDE_DOWN);
+    function onMenu() { return openIntervalAdjust(); }
+
+    private function openIntervalAdjust() {
+        var adjustView = new IntervalAdjustView(mController);
+        WatchUi.pushView(adjustView, new IntervalAdjustDelegate(mController, adjustView), WatchUi.SLIDE_UP);
         return true;
     }
 }
